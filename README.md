@@ -185,7 +185,82 @@ CUDA_VISIBLE_DEVICES=3 python train.py \
 python render.py -m ./output_pandaset/027
 ```
 
-#### Step 8. Prepare for Unveiling
+### Step 8. Prepare for Unveiling
+
+#### Inpainting Pretrained Model Preparation
+
+We provide utility modules to simplify the use of inpainting models:
+
+* `utils/zits_utils.py`
+* `utils/leftrefill_utils.py`
+
+Please download the pretrained models and place them in the corresponding directories before use.
+
+**ZITS-PlusPlus**
+
+Navigate to `./3rd_party/ZITS-PlusPlus`. Follow the official instructions to download the pretrained model.
+
+Alternatively, you can download and extract the model from this backup Google Drive link, and place the files under `./3rd_party/ZITS-PlusPlus/ckpts`.
+
+You may also run the following commands to download and extract the model:
+
+```bash
+cd 3rd_party/ZITS-PlusPlus
+mkdir ckpts
+cd ckpts
+wget https://huggingface.co/jingwei-xu-00/pretrained_backup_for_streetunveiler/resolve/main/ZITS%2B%2B/best_lsm_hawp.pth
+wget https://huggingface.co/jingwei-xu-00/pretrained_backup_for_streetunveiler/blob/main/ZITS%2B%2B/model_512.zip
+unzip model_512.zip
+```
+
+The directory structure should look like this:
+
+```
+ZITS-PlusPlus
+└── ckpts
+    ├── best_lsm_hawp.pth
+    ├── model_512
+    │   ├── config.yml
+    │   ├── models
+    │   │   └── last.ckpt
+    │   ├── samples
+    │   └── validation
+    └── model_512.zip
+```
+
+Finally, build the NMS module:
+
+```bash
+cd 3rd_party/ZITS-PlusPlus/nms/cxx/src 
+source build.sh
+```
+
+**LeftRefill**
+
+Navigate to `./3rd_party/LeftRefill`. Follow the official instructions to download the pretrained model.
+
+Alternatively, download it from this backup Google Drive link and place it under `./3rd_party/LeftRefill/pretrained_models`.
+
+You may also use the following commands:
+
+```bash
+cd 3rd_party/LeftRefill
+mkdir pretrained_models
+cd pretrained_models
+wget https://huggingface.co/jingwei-xu-00/pretrained_backup_for_streetunveiler/resolve/main/LeftRefill/512-inpainting-ema.ckpt
+```
+
+The directory structure should look like this:
+
+```
+LeftRefill
+└── pretrained_models
+    └── 512-inpainting-ema.ckpt
+```
+
+Update: We provide a simple API wrapper for LeftRefill at [https://github.com/DavidXu-JJ/simple-leftrefill-inpainting](https://github.com/DavidXu-JJ/simple-leftrefill-inpainting). You may use this if you're integrating LeftRefill into your own project.
+
+After downloading the pretrained models, you can run the following command:
 
 ```bash
 # Example usage:
@@ -193,12 +268,13 @@ python render.py -m ./output_pandaset/027
 sh unveil_preprocess.sh ./output_pandaset/027/ 0 50000
 ```
 
+
 #### Step 9. Unveiling
 
 ```bash
 # Example usage:
-# sh unveil.sh [model_path] [key_frame_list] [gpu_id]
-sh unveil.sh ./output_pandaset/027_3x/ "150 120 90 60 30 0" 0
+# sh unveil.sh [model_path] [key_frame_list] [iteration] [gpu_id]
+sh unveil.sh ./output_pandaset/027_3x/ "150 120 90 60 30 0" 50000 0
 ```
 
 #### Step 10. Evaluation
