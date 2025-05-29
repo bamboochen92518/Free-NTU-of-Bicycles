@@ -65,8 +65,9 @@ def render_sets(dataset: ModelParams, iteration: int, pipeline: PipelineParams, 
         sky_model = SkyModel()
         scene = Scene(dataset, gaussians, sky_model, load_iteration=iteration, shuffle=False, only_pose=False,
                       splatting_ply_path=os.path.join(dataset.model_path,
-                                                      "instance_workspace_{}".format(current_inpaint_round),
-                                                      "checkpoint", "point_cloud.ply")
+                                                      "point_cloud", 
+                                                      "iteration_{}".format(iteration),
+                                                      "colmap_point_cloud.ply")
                       )
 
         bg_color = [0, 0, 0]

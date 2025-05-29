@@ -28,7 +28,8 @@ from scene.dataset_readers.projection_utils import getCullMaskPointCloudInFrame,
 def getPandasetCameraPosition(
         panda_scene
 ):
-    consider_camera = ['front_camera']
+    consider_camera = ['front_camera', 'front_left_camera', 'front_right_camera']
+    # consider_camera = ['front_camera']
 
     sl = slice(None, None, 1)
     camera_position = []
@@ -123,7 +124,8 @@ def getPandasetColmapSemanticPcd(
         ext = 'npz' if compress else 'npy'
         return f'{idx_to_frame_str(frame_index)}.{ext}'
 
-    consider_camera = ['front_camera']
+    consider_camera = ['front_camera', 'front_left_camera', 'front_right_camera']
+    # consider_camera = ['front_camera']
     image_count = 0
 
     sl = slice(None, None, 1)
@@ -221,7 +223,8 @@ def readPandasetInfo(
     cam_infos = sorted(cam_infos_unsorted.copy(), key=lambda x: x.image_name)
 
     # Load PandaSet images and assign to cam_infos
-    consider_camera = ['front_camera']
+    consider_camera = ['front_camera', 'front_left_camera', 'front_right_camera']
+    # consider_camera = ['front_camera']
     image_count = 0
     updated_cam_infos = []
     for camera_idx, camera in enumerate(consider_camera):

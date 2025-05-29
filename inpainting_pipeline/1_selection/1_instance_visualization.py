@@ -43,7 +43,7 @@ def semantic_cluster(
             "checkpoint"
         )
 
-        inpainted_pcd = os.path.join(last_inpaint_checkpoint, "point_cloud.ply")
+        inpainted_pcd = os.path.join(last_inpaint_checkpoint, "colmap_point_cloud.ply")
         gaussians.load_ply(inpainted_pcd)
     else:
         if load_iteration == -1:
@@ -51,9 +51,7 @@ def semantic_cluster(
         else:
             loaded_iter = load_iteration
 
-        gaussians.load_ply(
-            os.path.join(dataset.model_path, "point_cloud", "iteration_" + str(loaded_iter), "point_cloud.ply")
-        )
+        gaussians.load_ply(os.path.join(dataset.model_path, "point_cloud", "iteration_{}".format(load_iteration), "colmap_point_cloud.ply"))
 
     if reverse_semantic:
         semantic_mask_bit = ~semantic_mask_bit
@@ -114,7 +112,7 @@ def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParam
             last_inpaint_checkpoint = os.path.join(dataset.model_path, "instance_workspace_{}".format(current_inpaint_round - 1), "checkpoint")
             scene = Scene(
                 dataset, gaussians, load_iteration=iteration, shuffle=False, only_pose=True,
-                splatting_ply_path= os.path.join(last_inpaint_checkpoint, "point_cloud.ply")
+                splatting_ply_path= os.path.join(last_inpaint_checkpoint, "colmap_point_cloud.ply")
             )
         else:
             scene = Scene(

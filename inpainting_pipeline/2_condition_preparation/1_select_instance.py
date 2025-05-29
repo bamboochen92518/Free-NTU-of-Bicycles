@@ -45,7 +45,7 @@ def generate_pcd_valid_mask(
             "checkpoint"
         )
 
-        last_inpaint_pcd = os.path.join(last_inpaint_checkpoint, "point_cloud.ply")
+        last_inpaint_pcd = os.path.join(last_inpaint_checkpoint, "colmap_point_cloud.ply")
         gaussians.load_ply(last_inpaint_pcd)
 
     else:
@@ -55,7 +55,7 @@ def generate_pcd_valid_mask(
             loaded_iter = load_iteration
 
         gaussians.load_ply(
-            os.path.join(dataset.model_path, "point_cloud", "iteration_" + str(loaded_iter), "point_cloud.ply")
+            os.path.join(dataset.model_path, "point_cloud", "iteration_" + str(loaded_iter), "colmap_point_cloud.ply")
         )
 
     semantic_mask = gaussians.get_semantic_splatting_mask(instance_semantic)

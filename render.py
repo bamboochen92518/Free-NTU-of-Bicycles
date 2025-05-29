@@ -6,7 +6,7 @@
 # This software is free for non-commercial, research and evaluation use 
 # under the terms of the LICENSE.md file.
 #
-# For inquiries contact  george.drettakis@inria.fr
+# For inquiries contact george.drettakis@inria.fr
 #
 
 import torch
@@ -22,7 +22,6 @@ from gaussian_renderer import GaussianModel
 from utils.mesh_utils import GaussianExtractor, post_process_mesh
 from utils.system_utils import searchForMaxInpaintRound
 from scene.env_map import SkyModel
-
 import open3d as o3d
 
 def render_set(model_path, name, scene, gaussians, pipeline, background, sky_model):
@@ -64,27 +63,27 @@ def render_set(model_path, name, scene, gaussians, pipeline, background, sky_mod
         surf_normal = render_pkg["surf_normal"] * 0.5 + 0.5
         torchvision.utils.save_image(surf_normal, os.path.join(normal_surf_path, '{0:05d}'.format(idx) + ".png"))
 
-def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool):
+def render_sets(dataset: ModelParams, iteration: int, pipeline: PipelineParams, skip_train: bool, skip_test: bool):
     with torch.no_grad():
         gaussians = GaussianModel(dataset.sh_degree)
         sky_model = SkyModel()
         scene = Scene(dataset, gaussians, sky_model, load_iteration=iteration, shuffle=False, only_pose=False)
 
-        bg_color = [1,1,1] if dataset.white_background else [0, 0, 0]
+        bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
         if not skip_train:
-             render_set(dataset.model_path, "train", scene, gaussians, pipeline, background, sky_model)
+            render_set(dataset.model_path, "train", scene, gaussians, pipeline, background, sky_model)
 
         if not skip_test:
-             render_set(dataset.model_path, "test", scene, gaussians, pipeline, background, sky_model)
+            render_set(dataset.model_path, "test", scene, gaussians, pipeline, background, sky_model)
 
 if __name__ == "__main__":
     # Set up command line argument parser
     parser = ArgumentParser(description="Testing script parameters")
     model = ModelParams(parser, sentinel=True)
     pipeline = PipelineParams(parser)
-    parser.add_argument("--iteration", default=-1, type=int)
+    parser.add_argument("--iteration", default=50000, type=int)
     parser.add_argument("--skip_train", action="store_true")
     parser.add_argument("--skip_test", action="store_true")
     parser.add_argument("--skip_mesh", action="store_true")
@@ -104,44 +103,47 @@ if __name__ == "__main__":
     gaussians = GaussianModel(dataset.sh_degree)
     sky_model = SkyModel()
     if current_inpaint_round != -1:
-        scene = Scene(dataset, gaussians, sky_model, load_iteration=iteration, shuffle=False, only_pose=True,
-                      splatting_ply_path=os.path.join(dataset.model_path,
-                                                      "instance_workspace_{}".format(current_inpaint_round),
-                                                      "checkpoint", "point_cloud.ply"))
+        splatting_ply_path = os.path.join(dataset.model_path,
+                                          "instance_workspace_{}".format(current_inpaint_round),
+                                          "point_cloud", "iteration_{}".format(iteration), "colmap_point_cloud.ply")
     else:
-        scene = Scene(dataset, gaussians, sky_model, load_iteration=iteration, shuffle=False, only_pose=True,
-                        splatting_ply_path=os.path.join(dataset.model_path,
-                                                        "point_cloud",
-                                                        "iteration_50000", "point_cloud.ply"))
+        splatting_ply_path = os.path.join(dataset.model_path,
+                                          "point_cloud", "iteration_{}".format(iteration), "colmap_point_cloud.ply")
+    # Check if the trained PLY file exists
+    if not os.path.exists(splatting_ply_path):
+        raise FileNotFoundError(
+            f"Trained PLY file not found at {splatting_ply_path}. "
+            f"Since the model has been trained, this file should exist. "
+            f"Please verify the iteration number ({iteration}) and the model path ({dataset.model_path})."
+        )
+
+    print(f"Using splatting_ply_path: {splatting_ply_path}")
+    scene = Scene(dataset, gaussians, sky_model, load_iteration=iteration, shuffle=False, only_pose=True,
+                  splatting_ply_path=splatting_ply_path)
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
     render_sets(model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test)
 
-    # train_dir = os.path.join(args.model_path, 'original_mesh', "ours_{}".format(scene.loaded_iter))
     train_dir = os.path.join(args.model_path, 'train', "ours_{}".format(scene.loaded_iter))
     gaussExtractor = GaussianExtractor(gaussians, render, pipe, bg_color=bg_color)
 
     if not args.skip_mesh:
         print("export mesh ...")
         os.makedirs(train_dir, exist_ok=True)
-        # set the active_sh to 0 to export only diffuse texture
         gaussExtractor.gaussians.active_sh_degree = 0
         camera_length = len(scene.getTrainCameras())
-        # gaussExtractor.reconstruction(scene.getTrainCameras())
         gaussExtractor.reconstruction(scene.getTrainCameras()[0:camera_length//3])
-        # extract the mesh and save
         if args.unbounded:
             name = 'fuse_unbounded.ply'
             mesh = gaussExtractor.extract_mesh_unbounded(resolution=args.mesh_res)
         else:
             name = 'fuse.ply'
             mesh = gaussExtractor.extract_mesh_bounded(voxel_size=args.voxel_size, sdf_trunc=5 * args.voxel_size,
-                                                       depth_trunc=args.depth_trunc)
+                                                      depth_trunc=args.depth_trunc)
 
         o3d.io.write_triangle_mesh(os.path.join(train_dir, name), mesh)
         print("mesh saved at {}".format(os.path.join(train_dir, name)))
-        # post-process the mesh and save, saving the largest N clusters
         mesh_post = post_process_mesh(mesh, cluster_to_keep=args.num_cluster)
         o3d.io.write_triangle_mesh(os.path.join(train_dir, name.replace('.ply', '_post.ply')), mesh_post)
         print("mesh post processed saved at {}".format(os.path.join(train_dir, name.replace('.ply', '_post.ply'))))

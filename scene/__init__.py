@@ -26,6 +26,7 @@ from arguments import ModelParams
 from utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
 from utils.graphics_utils import fov2focal, getProjectionMatrix
 from utils.semantic_utils import concerned_classes_ind_map
+import plyfile
 
 class Scene:
 
@@ -91,14 +92,42 @@ class Scene:
             print("Loading Test Cameras")
             self.test_cameras[resolution_scale], _ = cameraList_from_camInfos(scene_info.test_cameras, resolution_scale, args, only_pose)
 
+        # Load or create Gaussian model
         if self.loaded_iter:
-            self.gaussians.load_ply(os.path.join(self.model_path,
-                                                 "point_cloud",
-                                                 "iteration_" + str(self.loaded_iter),
-                                                 "colmap_point_cloud.ply") if splatting_ply_path is None else splatting_ply_path)
+            ply_path = os.path.join(self.model_path,
+                                   "point_cloud",
+                                   "iteration_" + str(self.loaded_iter),
+                                   "colmap_point_cloud.ply") if splatting_ply_path is None else splatting_ply_path
+            if not os.path.exists(ply_path):
+                raise FileNotFoundError(
+                    f"PLY file not found at {ply_path}. Since load_iteration={self.loaded_iter} is specified, "
+                    "a trained model PLY file is expected."
+                )
+            
+            print(f"Loading PLY file from {ply_path}")
+            try:
+                plydata = plyfile.PlyData.read(ply_path)
+                # Check if required Gaussian fields exist
+                required_fields = ["opacity", "scale_0", "rot_0", "f_dc_0"]
+                available_fields = [prop.name for prop in plydata.elements[0].properties]
+                missing_fields = [field for field in required_fields if field not in available_fields]
+                if missing_fields:
+                    raise ValueError(
+                        f"PLY file at {ply_path} is missing required fields: {missing_fields}. "
+                        f"Available fields: {available_fields}"
+                    )
+                print(f"PLY file fields: {available_fields}")
+                self.gaussians.load_ply(ply_path)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to load PLY file at {ply_path}. Ensure the file is not corrupted and has the correct format. "
+                    f"Error details: {str(e)}"
+                ) from e
+            
             if sky_model is not None:
                 sky_model.load(os.path.join(self.model_path, "checkpoint", "iteration_" + str(self.loaded_iter), "sky_params.pt"))
         else:
+            print("No iteration specified, creating Gaussian model from point cloud.")
             self.gaussians.create_from_pcd(scene_info.point_cloud, self.cameras_extent)
 
         self.w2c_list = defaultdict(list)
@@ -249,7 +278,7 @@ class Scene:
             small_z_mask = camera_point[..., 2] < max_z_val
 
         pixel_point = (self.intr_list[scale][frame_id][:3, :3] @ camera_point.T).T
-        pix = pixel_point[..., :2] / pixel_point[..., :2][..., None]
+        pix = pixel_point[..., :2] / pixel_point[..., 2][..., None]
 
         h = self.H_list[scale][frame_id]
         w = self.W_list[scale][frame_id]

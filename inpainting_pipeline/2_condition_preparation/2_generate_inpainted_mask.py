@@ -50,7 +50,7 @@ def include_neighbor_pcd(
             "checkpoint"
         )
 
-        last_inpaint_pcd = os.path.join(last_inpaint_checkpoint, "point_cloud.ply")
+        last_inpaint_pcd = os.path.join(last_inpaint_checkpoint, "colmap_point_cloud.ply")
         gaussians.load_ply(last_inpaint_pcd)
 
     else:
@@ -60,7 +60,7 @@ def include_neighbor_pcd(
             loaded_iter = load_iteration
 
         gaussians.load_ply(
-            os.path.join(dataset.model_path, "point_cloud", "iteration_" + str(loaded_iter), "point_cloud.ply")
+            os.path.join(dataset.model_path, "point_cloud", "iteration_" + str(loaded_iter), "colmap_point_cloud.ply")
         )
 
     instance_workspace = os.path.join(dataset.model_path, "instance_workspace_{}".format(current_inpaint_round))

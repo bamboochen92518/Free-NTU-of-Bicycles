@@ -1,4 +1,3 @@
-
 #
 # Edited by: Jingwei Xu, ShanghaiTech University
 # Based on the code from: https://github.com/graphdeco-inria/gaussian-splatting
@@ -38,8 +37,7 @@ class GaussianModel:
 
         self.rotation_activation = torch.nn.functional.normalize
 
-
-    def __init__(self, sh_degree : int):
+    def __init__(self, sh_degree: int):
         self.active_sh_degree = 0
         self.max_sh_degree = sh_degree  
         self._xyz = torch.empty(0)
@@ -97,12 +95,10 @@ class GaussianModel:
     def points_number(self):
         return self._xyz.shape[0]
 
-    # initialized as sqrt(mean dist of 3knn)
     @property
     def get_scaling(self):
         return self.scaling_activation(self._scaling)
 
-    # the norm of quaternion is 1
     @property
     def get_rotation(self):
         return self.rotation_activation(self._rotation)
@@ -111,7 +107,6 @@ class GaussianModel:
     def get_xyz(self):
         return self._xyz
 
-    # [point, sphere harmonics, RGB]
     @property
     def get_features(self):
         features_dc = self._features_dc
@@ -131,36 +126,36 @@ class GaussianModel:
         semantics_32bit = (1 << self._semantics.to(torch.int32)).squeeze(-1)
         return semantics_32bit
 
-    def get_covariance(self, scaling_modifier = 1):
+    def get_covariance(self, scaling_modifier=1):
         return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
 
     def oneupSHdegree(self):
         if self.active_sh_degree < self.max_sh_degree:
             self.active_sh_degree += 1
 
-    def create_from_pcd(self, pcd : SemanticPointCloud, spatial_lr_scale : float):
+    def create_from_pcd(self, pcd: SemanticPointCloud, spatial_lr_scale: float):
         self.spatial_lr_scale = spatial_lr_scale
         fused_point_cloud = pcd.points.float().cuda()
         fused_color = RGB2SH(pcd.colors.float().cuda())
         features = torch.zeros((fused_color.shape[0], 3, (self.max_sh_degree + 1) ** 2)).float().cuda()
-        features[:, :3, 0 ] = fused_color
+        features[:, :3, 0] = fused_color
         features[:, 3:, 1:] = 0.0
 
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
 
         dist2 = torch.clamp_min(dist3knn(pcd.points.float().cuda()), 0.0000001)
-        scales = torch.log(torch.sqrt(dist2))[...,None].repeat(1, 2)
+        scales = torch.log(torch.sqrt(dist2))[..., None].repeat(1, 2)
         rots = torch.rand((fused_point_cloud.shape[0], 4), device="cuda")
 
         opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
 
         self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
-        self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
-        self._features_rest = nn.Parameter(features[:,:,1:].transpose(1, 2).contiguous().requires_grad_(True))  # initialized as 0
+        self._features_dc = nn.Parameter(features[:, :, 0:1].transpose(1, 2).contiguous().requires_grad_(True))
+        self._features_rest = nn.Parameter(features[:, :, 1:].transpose(1, 2).contiguous().requires_grad_(True))
         self._scaling = nn.Parameter(scales.requires_grad_(True))
         self._rotation = nn.Parameter(rots.requires_grad_(True))
         self._opacity = nn.Parameter(opacities.requires_grad_(True))
-        self._semantics = pcd.semantics[..., None].to(torch.int32)  # [n, 1]
+        self._semantics = pcd.semantics[..., None].to(torch.int32)
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
 
     def training_setup(self, training_args):
@@ -213,7 +208,6 @@ class GaussianModel:
         self._opacity.register_hook(lambda x: modify_zero_grad(x, selected_zero_grad_indices))
         self._scaling.register_hook(lambda x: modify_zero_grad(x, selected_zero_grad_indices))
         self._rotation.register_hook(lambda x: modify_zero_grad(x, selected_zero_grad_indices))
-
 
     def update_learning_rate(self, iteration):
         ''' Learning rate scheduling per step '''
@@ -336,11 +330,30 @@ class GaussianModel:
         self._opacity = optimizable_tensors["opacity"]
 
     def load_ply(self, path):
+        print(f"Loading PLY file: {path}")
         plydata = PlyData.read(path)
+
+        available_fields = [p.name for p in plydata.elements[0].properties]
+        print(f"Available fields in PLY file: {available_fields}")
+
+        required_fields = ['x', 'y', 'z', 'opacity', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'semantics']
+        extra_f_names = [p.name for p in plydata.elements[0].properties if p.name.startswith("f_rest_")]
+        scale_names = [p.name for p in plydata.elements[0].properties if p.name.startswith("scale_")]
+        rot_names = [p.name for p in plydata.elements[0].properties if p.name.startswith("rot")]
+        required_fields.extend([f"f_rest_{i}" for i in range(len(extra_f_names))])
+        required_fields.extend([f"scale_{i}" for i in range(len(scale_names))])
+        required_fields.extend([f"rot_{i}" for i in range(len(rot_names))])
+
+        missing_fields = [field for field in required_fields if field not in available_fields]
+        if missing_fields:
+            raise ValueError(
+                f"PLY file at {path} is missing required fields: {missing_fields}. "
+                f"Available fields: {available_fields}"
+            )
 
         xyz = np.stack((np.asarray(plydata.elements[0]["x"]),
                         np.asarray(plydata.elements[0]["y"]),
-                        np.asarray(plydata.elements[0]["z"])),  axis=1)
+                        np.asarray(plydata.elements[0]["z"])), axis=1)
         opacities = np.asarray(plydata.elements[0]["opacity"])[..., np.newaxis]
 
         features_dc = np.zeros((xyz.shape[0], 3, 1))
@@ -348,23 +361,20 @@ class GaussianModel:
         features_dc[:, 1, 0] = np.asarray(plydata.elements[0]["f_dc_1"])
         features_dc[:, 2, 0] = np.asarray(plydata.elements[0]["f_dc_2"])
 
-        extra_f_names = [p.name for p in plydata.elements[0].properties if p.name.startswith("f_rest_")]
-        extra_f_names = sorted(extra_f_names, key = lambda x: int(x.split('_')[-1]))
-        assert len(extra_f_names)==3*(self.max_sh_degree + 1) ** 2 - 3
+        extra_f_names = sorted(extra_f_names, key=lambda x: int(x.split('_')[-1]))
+        assert len(extra_f_names) == 3 * (self.max_sh_degree + 1) ** 2 - 3, \
+            f"Expected {3 * (self.max_sh_degree + 1) ** 2 - 3} f_rest fields, but found {len(extra_f_names)}"
         features_extra = np.zeros((xyz.shape[0], len(extra_f_names)))
         for idx, attr_name in enumerate(extra_f_names):
             features_extra[:, idx] = np.asarray(plydata.elements[0][attr_name])
-        # Reshape (P,F*SH_coeffs) to (P, F, SH_coeffs except DC)
         features_extra = features_extra.reshape((features_extra.shape[0], 3, (self.max_sh_degree + 1) ** 2 - 1))
 
-        scale_names = [p.name for p in plydata.elements[0].properties if p.name.startswith("scale_")]
-        scale_names = sorted(scale_names, key = lambda x: int(x.split('_')[-1]))
+        scale_names = sorted(scale_names, key=lambda x: int(x.split('_')[-1]))
         scales = np.zeros((xyz.shape[0], len(scale_names)))
         for idx, attr_name in enumerate(scale_names):
             scales[:, idx] = np.asarray(plydata.elements[0][attr_name])
 
-        rot_names = [p.name for p in plydata.elements[0].properties if p.name.startswith("rot")]
-        rot_names = sorted(rot_names, key = lambda x: int(x.split('_')[-1]))
+        rot_names = sorted(rot_names, key=lambda x: int(x.split('_')[-1]))
         rots = np.zeros((xyz.shape[0], len(rot_names)))
         for idx, attr_name in enumerate(rot_names):
             rots[:, idx] = np.asarray(plydata.elements[0][attr_name])
@@ -380,6 +390,7 @@ class GaussianModel:
         self._semantics = torch.tensor(semantics, dtype=torch.int32, device='cuda')
 
         self.active_sh_degree = self.max_sh_degree
+        print(f"Successfully loaded PLY file: {path}")
 
     def replace_tensor_to_optimizer(self, tensor, name):
         optimizable_tensors = {}
@@ -436,7 +447,6 @@ class GaussianModel:
             self._rotation = self._rotation[valid_points_mask]
         self._semantics = self._semantics[valid_points_mask]
 
-
         if hasattr(self, 'cluster_idx'):
             self.cluster_idx = self.cluster_idx[valid_points_mask]
 
@@ -473,11 +483,11 @@ class GaussianModel:
 
     def densification_postfix(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation, new_semantics):
         d = {"xyz": new_xyz,
-        "f_dc": new_features_dc,
-        "f_rest": new_features_rest,
-        "opacity": new_opacities,
-        "scaling" : new_scaling,
-        "rotation" : new_rotation}
+             "f_dc": new_features_dc,
+             "f_rest": new_features_rest,
+             "opacity": new_opacities,
+             "scaling": new_scaling,
+             "rotation": new_rotation}
 
         optimizable_tensors = self.cat_tensors_to_optimizer(d)
         self._xyz = optimizable_tensors["xyz"]
@@ -503,7 +513,6 @@ class GaussianModel:
 
         stds = self.get_scaling[selected_pts_mask].repeat(N,1)
         stds = torch.cat([stds, 0 * torch.ones_like(stds[:,:1])], dim=-1)
-        # means =torch.zeros((stds.size(0), 3),device="cuda")
         means = torch.zeros_like(stds)
         samples = torch.normal(mean=means, std=stds)
         rots = build_rotation(self._rotation[selected_pts_mask]).repeat(N,1,1)
@@ -576,7 +585,7 @@ class GaussianModel:
         self.prune_points(prune_mask)
         torch.cuda.empty_cache()
 
-    def cluster_semantic_instance(self, semantic_mask_bit, threshold = 3e-2, parallel = True):
+    def cluster_semantic_instance(self, semantic_mask_bit, threshold=3e-2, parallel=True):
         dset = DisjointSet(self.points_number).cuda()
 
         self.cluster_idx = torch.full((self.points_number,), fill_value=-1, dtype=torch.int64).cuda()
@@ -614,7 +623,7 @@ class GaussianModel:
 
         self.prune_invalid_cluster()
 
-    def cluster_instance_with_mask(self, valid_mask, threshold = 7e-2, parallel = True):
+    def cluster_instance_with_mask(self, valid_mask, threshold=7e-2, parallel=True):
         with torch.no_grad():
             dset = DisjointSet(self.points_number).cuda()
 
@@ -653,7 +662,6 @@ class GaussianModel:
     def get_valid_cluster_mask(self):
         return self.cluster_idx != -1
 
-    """ prune the points without cluster index """
     def prune_invalid_cluster(self):
         self.prune_splatting_with_mask(~self.get_valid_cluster_mask())
 
