@@ -222,7 +222,7 @@ data/
 
 > The base path for all files is: `/tmp2/b10902005/StreetUnveiler`
 
-#### 🧪 Step 7: Output Results
+#### Step 7: Output Results
 
 ```
 output_pandaset/
@@ -235,7 +235,9 @@ output_pandaset/
 
 > I aim to **enhance the quality** of the output in the `ours/` folder, as it's currently equivalent to `ours_low_quality`.
 
-#### 📉 Step 10: Evaluation Metrics
+Note: Each output directory (except 027/) contains a training_metrics.json file, which records PSNR and loss values every 1000 iterations during training. Visualization code is not yet implemented. 
+
+#### Step 10: Evaluation Metrics
 
 * Evaluated on `027_3x` (without LiDAR, 1 view):
 
@@ -244,7 +246,7 @@ output_pandaset/
 
 > These results deviate significantly from those reported in the original paper, likely due to the absence of LiDAR input.
 
-#### 🔧 Next Steps
+#### Next Steps
 
 I plan to **rebuild the results using LiDAR data**. Since all code has been modified to work without LiDAR, I will likely create a **new branch** for the LiDAR-based version.
 
@@ -255,6 +257,7 @@ I plan to **rebuild the results using LiDAR data**. Since all code has been modi
 - [ ] Add video clipping code
 - [x] Upload result of step 7
 - [ ] Create a new branch for the LiDAR-based version
+- [ ] Add visualize code to show learning curve
 
 ### Reference
 
