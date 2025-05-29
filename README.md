@@ -189,8 +189,8 @@ python render.py -m ./output_pandaset/027
 
 ```bash
 # Example usage:
-# sh unveil_prepare.sh [model_path] [gpu_id]
-sh unveil_prepare.sh ./output_waymo/segment-1172406780360799916_1660_000_1680_000_with_camera_labels 0
+# sh unveil_preprocess.sh [model_path] [gpu_id] [iteration]
+sh unveil_preprocess.sh ./output_pandaset/027/ 0 50000
 ```
 
 #### Step 9. Unveiling
@@ -198,15 +198,63 @@ sh unveil_prepare.sh ./output_waymo/segment-1172406780360799916_1660_000_1680_00
 ```bash
 # Example usage:
 # sh unveil.sh [model_path] [key_frame_list] [gpu_id]
-sh unveil.sh ./output_waymo/segment-1172406780360799916_1660_000_1680_000_with_camera_labels "150 120 90 60 30 0" 0
+sh unveil.sh ./output_pandaset/027_3x/ "150 120 90 60 30 0" 0
 ```
+
+#### Step 10. Evaluation
+
+```bash
+# Example usage:
+# sh eval_lpips_fid.sh [model_path] [gt_path] [gpu_id]
+sh eval_lpips_fid.sh "output_pandaset/027_3x/instance_workspace_0/final_renders" "output_pandaset/027_3x/instance_workspace_0/gt" 0
+```
+
+### Current Progress
+
+#### Data Structure
+
+```
+data/
+├── pandaset/             # Without LiDAR
+├── pandaset_origin/      # With LiDAR
+└── pandaset_ours/        # Without LiDAR (Campus view)
+```
+
+> The base path for all files is: `/tmp2/b10902005/StreetUnveiler`
+
+#### 🧪 Step 7: Output Results
+
+```
+output_pandaset/
+├── 027/                  # With LiDAR, 3 views
+├── 027_1x/               # Without LiDAR, 1 view
+├── 027_3x/               # Without LiDAR, 1 view
+├── ours/                 # Without LiDAR, 1 view (intended for high quality)
+└── ours_low_quality/     # Same as "ours", current version is low quality
+```
+
+> I aim to **enhance the quality** of the output in the `ours/` folder, as it's currently equivalent to `ours_low_quality`.
+
+#### 📉 Step 10: Evaluation Metrics
+
+* Evaluated on `027_3x` (without LiDAR, 1 view):
+
+  * **FID:** 175.61
+  * **Average LPIPS:** 0.3733
+
+> These results deviate significantly from those reported in the original paper, likely due to the absence of LiDAR input.
+
+#### 🔧 Next Steps
+
+I plan to **rebuild the results using LiDAR data**. Since all code has been modified to work without LiDAR, I will likely create a **new branch** for the LiDAR-based version.
 
 ### TODO
 
-- [ ] Unveiling (step 8 and 9)
+- [x] Unveiling (step 8 and 9)
 - [ ] Enhance resolution
 - [ ] Add video clipping code
-- [ ] Upload result of step 7
+- [x] Upload result of step 7
+- [ ] Create a new branch for the LiDAR-based version
 
 ### Reference
 
