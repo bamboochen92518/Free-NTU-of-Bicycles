@@ -72,6 +72,11 @@ Follow these steps to prepare your dataset and perform scene reconstruction usin
 
 Record a driving video and extract image frames from it.
 
+```
+conda activate streetunveiler
+python preprocess_video.py --video_path data/20250512_164106.mp4 --output_dir data/pandaset_ours_hq/raw/ours/camera/front_camera/ --interval 0.1
+```
+
 #### Step 2. Organize Your Data Directory
 
 Structure your dataset as follows:
@@ -294,6 +299,7 @@ data/
 ├── pandaset/             # Without LiDAR
 ├── pandaset_origin/      # With LiDAR
 └── pandaset_ours/        # Without LiDAR (Campus view)
+└── pandaset_ours_hq/     # Without LiDAR (Campus view), generate by preprocess_video.py
 ```
 
 > The base path for all files is: `/tmp2/b10902005/StreetUnveiler`
@@ -329,10 +335,12 @@ I plan to **rebuild the results using LiDAR data**. Since all code has been modi
 ### TODO
 
 - [x] Unveiling (step 8 and 9)
-- [ ] Enhance resolution
-- [ ] Add video clipping code
+- [x] Enhance resolution
+- [x] Add video clipping code
 - [x] Upload result of step 7
+- [ ] Run test for high resolution video
 - [ ] Create a new branch for the LiDAR-based version
+- [ ] Run test for the LiDAR-based version
 - [ ] Add visualize code to show learning curve
 
 ### Reference
