@@ -184,10 +184,24 @@ CUDA_VISIBLE_DEVICES=3 python train.py \
     -r 4
 ```
 
-**Render Output:**
+### **Render Output**
+
+To render, run:
 
 ```bash
 python render.py -m ./output_pandaset/027
+```
+
+If you encounter the following error:
+
+```
+OSError: Could not find compatible tinycudann extension for compute capability 86.
+```
+
+Please specify a compatible GPU (0-3 on meow1) before running the script. For example:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python render.py -m ./output_pandaset/027
 ```
 
 ### Step 8. Prepare for Unveiling
@@ -308,9 +322,10 @@ data/
 
 ```
 output_pandaset/
-├── 027/                  # With LiDAR, 3 views
+├── 027/                  # With LiDAR, 3 views (Incomplete)
 ├── 027_1x/               # Without LiDAR, 1 view
-├── 027_3x/               # Without LiDAR, 1 view
+├── 027_3x/               # Without LiDAR, 3 view
+├── 027_3o/               # With LiDAR, 3 view 
 ├── ours/                 # Without LiDAR, 1 view (intended for high quality)
 └── ours_low_quality/     # Same as "ours", current version is low quality
 ```
@@ -339,9 +354,10 @@ I plan to **rebuild the results using LiDAR data**. Since all code has been modi
 - [x] Add video clipping code
 - [x] Upload result of step 7
 - [ ] Run test for high resolution video
-- [ ] Create a new branch for the LiDAR-based version
-- [ ] Run test for the LiDAR-based version
+- [x] Create a new branch for the LiDAR-based version
+- [x] Run test for the LiDAR-based version (The original repository's code is located in `/tmp2/b10902005/tmp/StreetUnveiler/`, which means I haven't created a new branch for it yet.)
 - [ ] Add visualize code to show learning curve
+- [ ] Integrate COLMAP from VGGT
 
 ### Reference
 
