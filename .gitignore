@@ -2,3 +2,4 @@ __pycache__/
 data/
 output*
 tmp.py
+masked_image.jpg

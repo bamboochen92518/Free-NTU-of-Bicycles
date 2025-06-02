@@ -162,6 +162,19 @@ python extract_masks_after_colmap.py \
 
 Note: If the number of images in the `images` folder differs from the `input` folder or if you encounter distorted images, try re-running `run_colmap.sh`.
 
+**Note:**
+Each `.npz` file contains a NumPy array of shape `(1080, 1920)`. The mapping between label values and class names can be found [here](https://github.com/NVlabs/SegFormer/blob/65fa8cfa9b52b6ee7e8897a98705abf8570f9e32/mmseg/datasets/cityscapes.py#L21).
+For example, the label index for **bicycle** is `18`.
+
+To check whether the object has been properly removed, you can use the following command:
+
+```bash
+python check_mask.py \
+  --image_path data/pandaset_ours/colmap/ours/input/00000000.jpg \
+  --mask_path data/pandaset_ours/colmap/ours/input_masks/00000000.npz \
+  --label_index 18
+```
+
 #### Step 6. Make Dataset Recognizable by the Codebase
 
 ```bash
